@@ -34,13 +34,12 @@ local function GetMobileUIScale()
     if not IsMobile() then
         return 1
     end
-    -- larger so tabs/buttons stay tappable
     if shortest <= 500 then
-        return 0.88
+        return 0.78
     elseif shortest <= 700 then
-        return 0.92
+        return 0.84
     else
-        return 0.96
+        return 0.90
     end
 end
 
@@ -3058,7 +3057,7 @@ function Library:CreateWindow(...)
     if typeof(Config.Position) ~= 'UDim2' then Config.Position = UDim2.fromOffset(175, 50) end
     if typeof(Config.Size) ~= 'UDim2' then
         if IsMobile() then
-            Config.Size = UDim2.fromOffset(500, 560)
+            Config.Size = UDim2.fromOffset(460, 520)
         else
             Config.Size = UDim2.fromOffset(550, 600)
         end
