@@ -27,6 +27,23 @@ local function IsPrimaryHeld()
     return type(touches) == 'table' and #touches > 0
 end
 
+local function GetMobileUIScale()
+    local cam = workspace.CurrentCamera
+    local vp = cam and cam.ViewportSize or Vector2.new(1280, 720)
+    local shortest = math.min(vp.X, vp.Y)
+    -- phone ~0.62–0.78, tablet ~0.85, pc 1
+    if not IsMobile() then
+        return 1
+    end
+    if shortest <= 500 then
+        return 0.62
+    elseif shortest <= 700 then
+        return 0.72
+    else
+        return 0.82
+    end
+end
+
 
 local ProtectGui = protectgui or (syn and syn.protect_gui) or (function() end);
 
@@ -47,6 +64,28 @@ end)
 if not ScreenGui.Parent then
     ScreenGui.Parent = CoreGui
 end
+
+local UIScale = Instance.new('UIScale')
+UIScale.Name = 'MobileScale'
+UIScale.Scale = GetMobileUIScale()
+UIScale.Parent = ScreenGui
+
+local function RefreshUIScale()
+    UIScale.Scale = GetMobileUIScale()
+end
+
+pcall(function()
+    workspace:GetPropertyChangedSignal('CurrentCamera'):Connect(function()
+        local cam = workspace.CurrentCamera
+        if cam then
+            cam:GetPropertyChangedSignal('ViewportSize'):Connect(RefreshUIScale)
+            RefreshUIScale()
+        end
+    end)
+    if workspace.CurrentCamera then
+        workspace.CurrentCamera:GetPropertyChangedSignal('ViewportSize'):Connect(RefreshUIScale)
+    end
+end)
 
 local Toggles = {};
 local Options = {};
@@ -75,6 +114,13 @@ local Library = {
 
     Signals = {};
     ScreenGui = ScreenGui;
+    UIScale = UIScale;
+    IsMobile = IsMobile;
+    SetUIScale = function(self, scale)
+        if typeof(scale) == 'number' and scale > 0.3 and scale <= 2 then
+            UIScale.Scale = scale
+        end
+    end;
 };
 
 local RainbowStep = 0
@@ -3010,7 +3056,14 @@ function Library:CreateWindow(...)
     if type(Config.MenuFadeTime) ~= 'number' then Config.MenuFadeTime = 0.2 end
 
     if typeof(Config.Position) ~= 'UDim2' then Config.Position = UDim2.fromOffset(175, 50) end
-    if typeof(Config.Size) ~= 'UDim2' then Config.Size = UDim2.fromOffset(550, 600) end
+    if typeof(Config.Size) ~= 'UDim2' then
+        if IsMobile() then
+            -- compact window; UIScale shrinks it further on small phones
+            Config.Size = UDim2.fromOffset(420, 480)
+        else
+            Config.Size = UDim2.fromOffset(550, 600)
+        end
+    end
 
     if Config.Center then
         Config.AnchorPoint = Vector2.new(0.5, 0.5)
