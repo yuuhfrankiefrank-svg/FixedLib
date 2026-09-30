@@ -31,16 +31,16 @@ local function GetMobileUIScale()
     local cam = workspace.CurrentCamera
     local vp = cam and cam.ViewportSize or Vector2.new(1280, 720)
     local shortest = math.min(vp.X, vp.Y)
-    -- phone ~0.62–0.78, tablet ~0.85, pc 1
     if not IsMobile() then
         return 1
     end
+    -- larger so tabs/buttons stay tappable
     if shortest <= 500 then
-        return 0.62
+        return 0.88
     elseif shortest <= 700 then
-        return 0.72
+        return 0.92
     else
-        return 0.82
+        return 0.96
     end
 end
 
@@ -3058,8 +3058,7 @@ function Library:CreateWindow(...)
     if typeof(Config.Position) ~= 'UDim2' then Config.Position = UDim2.fromOffset(175, 50) end
     if typeof(Config.Size) ~= 'UDim2' then
         if IsMobile() then
-            -- compact window; UIScale shrinks it further on small phones
-            Config.Size = UDim2.fromOffset(420, 480)
+            Config.Size = UDim2.fromOffset(500, 560)
         else
             Config.Size = UDim2.fromOffset(550, 600)
         end
@@ -3142,7 +3141,8 @@ function Library:CreateWindow(...)
     local TabArea = Library:Create('Frame', {
         BackgroundTransparency = 1;
         Position = UDim2.new(0, 8, 0, 8);
-        Size = UDim2.new(1, -16, 0, 21);
+        Size = UDim2.new(1, -16, 0, IsMobile() and 28 or 21);
+        Active = true;
         ZIndex = 1;
         Parent = MainSectionInner;
     });
@@ -3154,11 +3154,12 @@ function Library:CreateWindow(...)
         Parent = TabArea;
     });
 
+    local tabBarH = IsMobile() and 28 or 21
     local TabContainer = Library:Create('Frame', {
         BackgroundColor3 = Library.MainColor;
         BorderColor3 = Library.OutlineColor;
-        Position = UDim2.new(0, 8, 0, 30);
-        Size = UDim2.new(1, -16, 1, -38);
+        Position = UDim2.new(0, 8, 0, 8 + tabBarH + 1);
+        Size = UDim2.new(1, -16, 1, -(8 + tabBarH + 1 + 8));
         ZIndex = 2;
         Parent = MainSectionInner;
     });
@@ -3184,7 +3185,8 @@ function Library:CreateWindow(...)
         local TabButton = Library:Create('Frame', {
             BackgroundColor3 = Library.BackgroundColor;
             BorderColor3 = Library.OutlineColor;
-            Size = UDim2.new(0, TabButtonWidth + 8 + 4, 1, 0);
+            Size = UDim2.new(0, math.max(TabButtonWidth + 16, 56), 1, 0);
+            Active = true;
             ZIndex = 1;
             Parent = TabArea;
         });
@@ -3198,7 +3200,18 @@ function Library:CreateWindow(...)
             Position = UDim2.new(0, 0, 0, 0);
             Size = UDim2.new(1, 0, 1, -1);
             Text = Name;
+            Active = true;
             ZIndex = 1;
+            Parent = TabButton;
+        });
+
+        -- invisible full-size button so touch always hits the tab
+        local TabHit = Library:Create('TextButton', {
+            BackgroundTransparency = 1;
+            Text = '';
+            Size = UDim2.new(1, 0, 1, 0);
+            ZIndex = 2;
+            Active = true;
             Parent = TabButton;
         });
 
@@ -3598,9 +3611,20 @@ function Library:CreateWindow(...)
             return Tab:AddTabbox({ Name = Name, Side = 2; });
         end;
 
+        local function activateTab()
+            Tab:ShowTab();
+        end
+
         TabButton.InputBegan:Connect(function(Input)
             if IsPrimaryDown(Input) then
-                Tab:ShowTab();
+                activateTab();
+            end;
+        end);
+
+        TabHit.MouseButton1Click:Connect(activateTab);
+        TabHit.InputBegan:Connect(function(Input)
+            if IsPrimaryDown(Input) then
+                activateTab();
             end;
         end);
 
