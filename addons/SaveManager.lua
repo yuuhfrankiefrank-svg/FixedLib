@@ -130,10 +130,14 @@ local SaveManager = {} do
 
 	function SaveManager:SetFolder(folder)
 		self.Folder = folder
+		self._foldersReady = false
 		self:BuildFolderTree()
 	end
 
 	function SaveManager:BuildFolderTree()
+		if self._foldersReady and self._foldersFor == self.Folder then
+			return
+		end
 		local paths = {
 			self.Folder,
 			pathJoin(self.Folder, 'themes'),
@@ -142,6 +146,8 @@ local SaveManager = {} do
 		for i = 1, #paths do
 			ensureFolder(paths[i])
 		end
+		self._foldersReady = true
+		self._foldersFor = self.Folder
 	end
 
 	function SaveManager:Save(name)
@@ -155,20 +161,21 @@ local SaveManager = {} do
 		local fullPath = pathJoin(self.Folder, 'settings', name .. '.json')
 		local data = { objects = {} }
 
+		local parser, ignore = self.Parser, self.Ignore
 		for idx, toggle in next, Toggles do
-			if not self.Ignore[idx] and toggle.Type and self.Parser[toggle.Type] then
-				local ok, entry = pcall(self.Parser[toggle.Type].Save, idx, toggle)
-				if ok and entry then
-					table.insert(data.objects, entry)
+			if not ignore[idx] then
+				local p = toggle.Type and parser[toggle.Type]
+				if p then
+					table.insert(data.objects, p.Save(idx, toggle))
 				end
 			end
 		end
 
 		for idx, option in next, Options do
-			if not self.Ignore[idx] and option.Type and self.Parser[option.Type] then
-				local ok, entry = pcall(self.Parser[option.Type].Save, idx, option)
-				if ok and entry then
-					table.insert(data.objects, entry)
+			if not ignore[idx] then
+				local p = option.Type and parser[option.Type]
+				if p then
+					table.insert(data.objects, p.Save(idx, option))
 				end
 			end
 		end
